@@ -195,13 +195,13 @@
 			    if (accessToken() && associating()) {
 			        associating('clear');
 			        redirectTarget('clear');
-			        Api.addExternalLogin(accessToken(), external_data.access_token).success(function () {
+			        Api.addExternalLogin(accessToken(), external_data.access_token).then(function () {
 			            deferred.resolve();
 			        });
 			        
 			    } else {
 			        //Get user info and login or show external register screen
-			        Api.getUserInfo(external_data.access_token).success(function(user) {
+			        Api.getUserInfo(external_data.access_token).then(function(user) {
 			            if (user.hasRegistered) {
 			                accessToken(external_data.access_token, rememberMe);
 			                Security.user = user;
@@ -248,7 +248,7 @@
 			//Check for access token and get user info
 			if (accessToken()) {
 				accessToken(accessToken());
-				Api.getUserInfo(accessToken()).success(function (user) {
+				Api.getUserInfo(accessToken()).then(function (user) {
 				    Security.user = user;
 
 					if (securityProvider.events.reloadUser) securityProvider.events.reloadUser(Security, user); // Your Register events
@@ -256,7 +256,7 @@
 			}
 
 			//Fetch list of external logins
-			Api.getExternalLogins().success(function (logins) {
+			Api.getExternalLogins().then(function (logins) {
 				Security.externalLogins = logins;
 			});
 
@@ -274,15 +274,18 @@
 			var deferred = $q.defer();
 
 			data.grant_type = 'password';
-			Api.login(data).success(function (user) {
-				accessToken(user.access_token, data.rememberMe);
-				Security.user = user;
-				Security.redirectAuthenticated(redirectTarget() || securityProvider.urls.home);
-				if (securityProvider.events.login) securityProvider.events.login(Security, user); // Your Login events
-				deferred.resolve(Security.user);
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+			Api.login(data).then(
+				function (user) {
+					accessToken(user.access_token, data.rememberMe);
+					Security.user = user;
+					Security.redirectAuthenticated(redirectTarget() || securityProvider.urls.home);
+					if (securityProvider.events.login) securityProvider.events.login(Security, user); // Your Login events
+					deferred.resolve(Security.user);
+				}, 
+				function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
@@ -326,16 +329,18 @@
 		Security.logout = function () {
 			var deferred = $q.defer();
 
-			Api.logout().success(function () {
-				Security.user = null;
-				accessToken('clear');
-				redirectTarget('clear');
-				if (securityProvider.events.logout) securityProvider.events.logout(Security); // Your Logout events
-				$location.path(securityProvider.urls.postLogout);
-				deferred.resolve();
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+			Api.logout().success(
+				function () {
+					Security.user = null;
+					accessToken('clear');
+					redirectTarget('clear');
+					if (securityProvider.events.logout) securityProvider.events.logout(Security); // Your Logout events
+					$location.path(securityProvider.urls.postLogout);
+					deferred.resolve();
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
@@ -343,20 +348,24 @@
 		Security.register = function (data) {
 			var deferred = $q.defer();
 
-			Api.register(data).success(function () {
-				if (securityProvider.events.register) securityProvider.events.register(Security); // Your Register events
-				if (securityProvider.registerThenLogin) {
-					Security.login(data).then(function (user) {
-						deferred.resolve(user);
-					}, function (errorData) {
-						deferred.reject(errorData);
-					});
-				} else {
-					deferred.resolve();
+			Api.register(data).then(
+				function () {
+					if (securityProvider.events.register) securityProvider.events.register(Security); // Your Register events
+					if (securityProvider.registerThenLogin) {
+						Security.login(data).then(
+								function (user) {
+								deferred.resolve(user);
+							}, function (errorData) {
+								deferred.reject(errorData);
+							}
+						);
+					} else {
+						deferred.resolve();
+					}
+				}, function (errorData) {
+					deferred.reject(errorData);
 				}
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+			);
 
 			return deferred.promise;
 		};
@@ -367,13 +376,15 @@
 			if (!Security.externalUser) {
 				deferred.reject();
 			} else {
-				Api.registerExternal(Security.externalUser.access_token, Security.externalUser).success(function () {
-					//Success
-					deferred.resolve(Security.loginWithExternal(Security.externalUser.provider));
-					Security.externalUser = null;
-				}).error(function (errorData) {
-					deferred.reject(errorData);
-				});
+				Api.registerExternal(Security.externalUser.access_token, Security.externalUser).then(
+					function () {
+						//Success
+						deferred.resolve(Security.loginWithExternal(Security.externalUser.provider));
+						Security.externalUser = null;
+					}, function (errorData) {
+						deferred.reject(errorData);
+					}
+				);
 			}
 
 			return deferred.promise;
@@ -382,11 +393,13 @@
 		Security.forgotPassword = function (data) {
 			var deferred = $q.defer();
 
-			Api.forgotPassword(data).success(function (data) {
-				deferred.resolve(data);
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+			Api.forgotPassword(data).then(
+				function (data) {
+					deferred.resolve(data);
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
@@ -394,11 +407,13 @@
 		Security.resetPassword = function (data) {
 			var deferred = $q.defer();
 
-			Api.resetPassword(data).success(function (data) {
-				deferred.resolve(data);
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+			Api.resetPassword(data).then(
+				function (data) {
+					deferred.resolve(data);
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
@@ -406,11 +421,13 @@
 		Security.setPassword = function (data) {
             var deferred = $q.defer();
 
-            Api.setPassword(data).success(function () {
-                deferred.resolve();
-            }).error(function (errorData) {
-                deferred.reject(errorData);
-            });
+            Api.setPassword(data).then(
+				function () {
+					deferred.resolve();
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
             return deferred.promise;
         };
@@ -418,11 +435,13 @@
 		Security.confirmEmail = function (data) {
 			var deferred = $q.defer();
 
-			Api.confirmEmail(data).success(function (data) {
-				deferred.resolve(data);
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+			Api.confirmEmail(data).then(
+				function (data) {
+					deferred.resolve(data);
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
@@ -430,11 +449,13 @@
 	    Security.mangeInfo = function() {
 	        var deferred = $q.defer();
 
-	        Api.manageInfo().success(function (manageInfo) {
-	            deferred.resolve(manageInfo);
-	        }).error(function (errorData) {
-	            deferred.reject(errorData);
-	        });
+	        Api.manageInfo().then(
+				function (manageInfo) {
+					deferred.resolve(manageInfo);
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 	        return deferred.promise;
 	    };
@@ -442,11 +463,13 @@
 		Security.changePassword = function (data) {
 			var deferred = $q.defer();
 
-			Api.changePassword(data).success(function () {
-				deferred.resolve();
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+			Api.changePassword(data).then(
+				function () {
+					deferred.resolve();
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
@@ -454,11 +477,13 @@
 		Security.addExternalLogin = function (externalAccessToken, data) {
 			var deferred = $q.defer();
 
-		    Api.addExternalLogin(externalAccessToken, data).success(function () {
-				deferred.resolve();
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+		    Api.addExternalLogin(externalAccessToken, data).then(
+				function () {
+					deferred.resolve();
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
@@ -503,11 +528,13 @@
 		Security.removeLogin = function (data) {
 			var deferred = $q.defer();
 
-		    Api.removeLogin(data).success(function (result) {
-				deferred.resolve(result);
-			}).error(function (errorData) {
-				deferred.reject(errorData);
-			});
+		    Api.removeLogin(data).then(
+				function (result) {
+					deferred.resolve(result);
+				}, function (errorData) {
+					deferred.reject(errorData);
+				}
+			);
 
 			return deferred.promise;
 		};
